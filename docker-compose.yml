@@ -36,6 +36,11 @@ services:
       context: ./frontend
     restart: unless-stopped
     env_file: .env
+    environment:
+      # Next.js respeta la variable PORT; sin esto heredaba el PORT=4000
+      # del backend desde el .env compartido y escuchaba en el puerto
+      # equivocado dentro del contenedor.
+      PORT: "3000"
     depends_on:
       - backend
     ports:
