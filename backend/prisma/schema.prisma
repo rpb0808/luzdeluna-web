@@ -1,0 +1,98 @@
+// Esquema inicial de base de datos para Luz de Luna Centro Ecuestre.
+// El nucleo del MVP confirmado: reservas y pagos de clases.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RolUsuario {
+  CLIENTE
+  INSTRUCTOR
+  ADMIN
+}
+
+enum EstadoReserva {
+  PENDIENTE
+  CONFIRMADA
+  CANCELADA
+  COMPLETADA
+}
+
+enum EstadoPago {
+  PENDIENTE
+  PAGADO
+  FALLIDO
+  REEMBOLSADO
+}
+
+model Usuario {
+  id           String   @id @default(cuid())
+  nombre       String
+  email        String   @unique
+  passwordHash String
+  telefono     String?
+  rol          RolUsuario @default(CLIENTE)
+  creadoEn     DateTime @default(now())
+
+  reservas     Reserva[]
+}
+
+model Caballo {
+  id       String   @id @default(cuid())
+  nombre   String
+  raza     String?
+  activo   Boolean  @default(true)
+
+  clases   Clase[]
+}
+
+model Disciplina {
+  id          String  @id @default(cuid())
+  nombre      String  @unique // Salto, Adiestramiento, Equinoterapia, Vaulting
+  descripcion String?
+
+  clases      Clase[]
+}
+
+model Clase {
+  id            String     @id @default(cuid())
+  disciplina    Disciplina @relation(fields: [disciplinaId], references: [id])
+  disciplinaId  String
+  caballo       Caballo?   @relation(fields: [caballoId], references: [id])
+  caballoId     String?
+  instructor    String
+  fechaHoraIni  DateTime
+  fechaHoraFin  DateTime
+  cupoMaximo    Int        @default(1)
+  precio        Decimal    @db.Decimal(10, 2)
+
+  reservas      Reserva[]
+}
+
+model Reserva {
+  id         String        @id @default(cuid())
+  usuario    Usuario       @relation(fields: [usuarioId], references: [id])
+  usuarioId  String
+  clase      Clase         @relation(fields: [claseId], references: [id])
+  claseId    String
+  estado     EstadoReserva @default(PENDIENTE)
+  creadaEn   DateTime      @default(now())
+
+  pago       Pago?
+}
+
+model Pago {
+  id         String     @id @default(cuid())
+  reserva    Reserva    @relation(fields: [reservaId], references: [id])
+  reservaId  String     @unique
+  monto      Decimal    @db.Decimal(10, 2)
+  estado     EstadoPago @default(PENDIENTE)
+  proveedor  String?    // ej. Stripe, Culqi, MercadoPago
+  referenciaExterna String?
+  creadoEn   DateTime   @default(now())
+}
